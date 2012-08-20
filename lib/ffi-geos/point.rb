@@ -77,5 +77,9 @@ module Geos
         end
       EOF
     end
+
+    def dump_points(cur_path = [])
+      cur_path.push(self.dup)
+    end
   end
 end

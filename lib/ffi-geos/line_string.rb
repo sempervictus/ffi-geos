@@ -68,5 +68,9 @@ module Geos
         bool_result(FFIGeos.GEOSisClosed_r(Geos.current_handle, self.ptr))
       end
     end
+
+    def dump_points(cur_path = [])
+      cur_path.concat(self.to_a)
+    end
   end
 end
