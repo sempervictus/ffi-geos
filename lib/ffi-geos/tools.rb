@@ -92,5 +92,13 @@ module Geos
         enum[value]
       end
     end
+
+    def extract_options!(args)
+      if args.last.is_a?(Hash)
+        args.pop
+      else
+        {}
+      end
+    end
   end
 end
