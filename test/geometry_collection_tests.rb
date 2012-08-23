@@ -6,6 +6,11 @@ require 'test_helper'
 class GeometryCollectionTests < MiniTest::Unit::TestCase
   include TestHelper
 
+  def setup
+    super
+    writer.trim = true
+  end
+
   if ENV['FORCE_TESTS'] || Geos::GeometryCollection.method_defined?(:[])
     def test_geometry_collection_enumerator
       geom = read('GEOMETRYCOLLECTION(POINT(0 0))')
@@ -15,7 +20,6 @@ class GeometryCollectionTests < MiniTest::Unit::TestCase
     end
 
     def test_geometry_collection_array
-      writer.trim = true
       geom = read('GEOMETRYCOLLECTION(
         LINESTRING(0 0, 1 1, 2 2, 3 3),
         POINT(10 20),
@@ -42,7 +46,6 @@ class GeometryCollectionTests < MiniTest::Unit::TestCase
 
   if ENV['FORCE_TESTS'] || Geos::GeometryCollection.method_defined?(:detect)
     def test_geometry_collection_enumerable
-      writer.trim = true
       geom = read('GEOMETRYCOLLECTION(
         LINESTRING(0 0, 1 1, 2 2, 3 3, 10 0, 2 2),
         POINT(10 20),
@@ -167,20 +170,11 @@ class GeometryCollectionTests < MiniTest::Unit::TestCase
   end
 
   def test_snap_to_grid
-    wkt = 'GEOMETRYCOLLECTION (
-      LINESTRING (-10.12 0, -10.12 5, -10.12 5, -10.12 6, -10.12 6, -10.12 6, -10.12 7, -10.12 7, -10.12 7, -10.12 8, -10.12 8, -9 8, -9 9, -10.12 0),
-      POLYGON ((-10.12 0, -10.12 5, -10.12 5, -10.12 6, -10.12 6, -10.12 6, -10.12 7, -10.12 7, -10.12 7, -10.12 8, -10.12 8, -9 8, -9 9, -10.12 0)),
-      POINT (10.12 10.12)
-    )'
+    wkt = 'GEOMETRYCOLLECTION (LINESTRING (-10.12 0, -10.12 5, -10.12 5, -10.12 6, -10.12 6, -10.12 6, -10.12 7, -10.12 7, -10.12 7, -10.12 8, -10.12 8, -9 8, -9 9, -10.12 0), POLYGON ((-10.12 0, -10.12 5, -10.12 5, -10.12 6, -10.12 6, -10.12 6, -10.12 7, -10.12 7, -10.12 7, -10.12 8, -10.12 8, -9 8, -9 9, -10.12 0)), POINT (10.12 10.12))'
 
     expected = 'GEOMETRYCOLLECTION (LINESTRING (-10 0, -10 5, -10 5, -10 6, -10 6, -10 6, -10 7, -10 7, -10 7, -10 8, -10 8, -9 8, -9 9, -10 0), POLYGON ((-10 0, -10 5, -10 5, -10 6, -10 6, -10 6, -10 7, -10 7, -10 7, -10 8, -10 8, -9 8, -9 9, -10 0)), POINT (10 10))'
 
-    writer.trim = true
-
-    geom = read(wkt)
-    geom.snap_to_grid!(1)
-
-    assert_equal(expected, write(geom))
+    simple_bang_tester(:snap_to_grid, expected, wkt, 1)
   end
 
   def test_snap_to_grid_empty
@@ -188,8 +182,6 @@ class GeometryCollectionTests < MiniTest::Unit::TestCase
   end
 
   def test_snap_to_grid_with_srid
-    writer.trim = true
-
     wkt = 'GEOMETRYCOLLECTION (
       LINESTRING (-10.12 0, -10.12 5, -10.12 5, -10.12 6, -10.12 6, -10.12 6, -10.12 7, -10.12 7, -10.12 7, -10.12 8, -10.12 8, -9 8, -9 9, -10.12 0),
       POLYGON ((-10.12 0, -10.12 5, -10.12 5, -10.12 6, -10.12 6, -10.12 6, -10.12 7, -10.12 7, -10.12 7, -10.12 8, -10.12 8, -9 8, -9 9, -10.12 0)),
@@ -211,8 +203,6 @@ class GeometryCollectionTests < MiniTest::Unit::TestCase
   end
 
   def test_rotate
-    writer.rounding_precision = 3
-
     wkt = 'GEOMETRYCOLLECTION (POINT (1 1), LINESTRING (0 0, 10 10), POLYGON ((0 0, 5 0, 5 5, 0 5, 0 0)))'
 
     affine_tester(:rotate,
@@ -245,7 +235,6 @@ class GeometryCollectionTests < MiniTest::Unit::TestCase
   end
 
   def test_rotate_x
-    writer.rounding_precision = 3
     writer.output_dimensions = 3
 
     wkt = 'GEOMETRYCOLLECTION Z (POINT Z (1 1 1), LINESTRING Z (1 1 1, 10 10 10), POLYGON Z ((0 0 0, 5 0 0, 5 5 0, 0 5 0, 0 0 0)))'
@@ -276,7 +265,6 @@ class GeometryCollectionTests < MiniTest::Unit::TestCase
   end
 
   def test_rotate_y
-    writer.rounding_precision = 6
     writer.output_dimensions = 3
 
     wkt = 'GEOMETRYCOLLECTION Z (POINT Z (1 1 1), LINESTRING Z (1 1 1, 10 10 10), POLYGON Z ((0 0 0, 5 0 0, 5 5 0, 0 5 0, 0 0 0)))'
@@ -307,8 +295,6 @@ class GeometryCollectionTests < MiniTest::Unit::TestCase
   end
 
   def test_rotate_z
-    writer.rounding_precision = 3
-
     wkt = 'GEOMETRYCOLLECTION (POINT (1 1), LINESTRING (0 0, 10 10), POLYGON ((0 0, 5 0, 5 5, 0 5, 0 0)))'
 
     affine_tester(:rotate_z,

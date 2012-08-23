@@ -6,122 +6,118 @@ require 'test_helper'
 class GeometryTests < MiniTest::Unit::TestCase
   include TestHelper
 
-  def comparison_tester(method_with_args, geom_a, geom_b, expected)
-    method_with_args = Array(method_with_args)
-    method = method_with_args.shift
-    args = method_with_args
-
-    geom_1 = read(geom_a)
-    geom_b = read(geom_b)
-    result = geom_1.send(method, geom_b, *args)
-    assert_geom_eql_exact(read(expected), result)
-  end
-
-  def self_tester(method_with_args, g, expected)
-    method_with_args = Array(method_with_args)
-    geom = read(g)
-    result = geom.send(*method_with_args)
-    assert_geom_eql_exact(read(expected), result)
+  def setup
+    super
+    writer.trim = true
   end
 
   def test_intersection
     comparison_tester(
       :intersection,
-      'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))',
-      'POLYGON((5 5, 15 5, 15 15, 5 15, 5 5))',
-      'POLYGON((5 10, 10 10, 10 5, 5 5, 5 10))'
+      'POLYGON ((5 10, 10 10, 10 5, 5 5, 5 10))',
+      'POLYGON ((0 0, 10 0, 10 10, 0 10, 0 0))',
+      'POLYGON ((5 5, 15 5, 15 15, 5 15, 5 5))'
     )
   end
 
   def test_buffer
-    tester = lambda { |expected, geom, *args|
-      width, params = args
-      assert_equal(expected, write(read(geom).buffer(width, params)))
-    }
+    simple_tester(
+      :buffer,
+      'POLYGON EMPTY',
+      'POINT(0 0)',
+      0
+    )
 
-    writer.rounding_precision = 0
-
-    tester['POLYGON EMPTY', 'POINT(0 0)', 0]
-
-    tester[
-      'POLYGON ((10 0, 10 -2, 9 -4, 8 -6, 7 -7, 6 -8, 4 -9, 2 -10, 0 -10, -2 -10, -4 -9, -6 -8, -7 -7, -8 -6, -9 -4, -10 -2, -10 -0, -10 2, -9 4, -8 6, -7 7, -6 8, -4 9, -2 10, -0 10, 2 10, 4 9, 6 8, 7 7, 8 6, 9 4, 10 2, 10 0))',
+    snapped_tester(
+      :buffer,
+      'POLYGON ((10 0, 10 -2, 9 -4, 8 -6, 7 -7, 6 -8, 4 -9, 2 -10, 0 -10, -2 -10, -4 -9, -6 -8, -7 -7, -8 -6, -9 -4, -10 -2, -10 0, -10 2, -9 4, -8 6, -7 7, -6 8, -4 9, -2 10, 0 10, 2 10, 4 9, 6 8, 7 7, 8 6, 9 4, 10 2, 10 0))',
       'POINT(0 0)',
       10
-    ]
+    )
 
     # One segment per quadrant
-    tester[
-      'POLYGON ((10 0, 0 -10, -10 -0, -0 10, 10 0))',
+    snapped_tester(
+      :buffer,
+      'POLYGON ((10 0, 0 -10, -10 0, 0 10, 10 0))',
       'POINT(0 0)',
       10,
       { :quad_segs => 1 }
-    ]
+    )
 
     # End cap styles
-    tester[
+    snapped_tester(
+      :buffer,
       'POLYGON ((100 10, 110 0, 100 -10, 0 -10, -10 0, 0 10, 100 10))',
       'LINESTRING(0 0, 100 0)',
       10,
       { :quad_segs => 1, :endcap => :round }
-    ]
+    )
 
-    tester[
+    snapped_tester(
+      :buffer,
       'POLYGON ((100 10, 100 -10, 0 -10, 0 10, 100 10))',
       'LINESTRING(0 0, 100 0)',
       10,
       { :quad_segs => 1, :endcap => :flat }
-    ]
+    )
 
-    tester[
+    snapped_tester(
+      :buffer,
       'POLYGON ((100 10, 110 10, 110 -10, 0 -10, -10 -10, -10 10, 100 10))',
       'LINESTRING(0 0, 100 0)',
       10,
       { :quad_segs => 1, :endcap => :square }
-    ]
+    )
 
     # Join styles
-    tester[
+    snapped_tester(
+      :buffer,
       'POLYGON ((90 10, 90 100, 93 107, 100 110, 107 107, 110 100, 110 0, 107 -7, 100 -10, 0 -10, -7 -7, -10 0, -7 7, 0 10, 90 10))',
       'LINESTRING(0 0, 100 0, 100 100)',
       10,
       { :quad_segs => 2, :join => :round }
-    ]
+    )
 
-    tester[
+    snapped_tester(
+      :buffer,
       'POLYGON ((90 10, 90 100, 93 107, 100 110, 107 107, 110 100, 110 0, 100 -10, 0 -10, -7 -7, -10 0, -7 7, 0 10, 90 10))',
       'LINESTRING(0 0, 100 0, 100 100)',
       10,
       { :quad_segs => 2, :join => :bevel }
-    ]
+    )
 
-    tester[
+    snapped_tester(
+      :buffer,
       'POLYGON ((90 10, 90 100, 93 107, 100 110, 107 107, 110 100, 110 -10, 0 -10, -7 -7, -10 0, -7 7, 0 10, 90 10))',
       'LINESTRING(0 0, 100 0, 100 100)',
       10,
       { :quad_segs => 2, :join => :mitre }
-    ]
+    )
 
-    tester[
+    snapped_tester(
+      :buffer,
       'POLYGON ((90 10, 90 100, 93 107, 100 110, 107 107, 110 100, 109 -5, 105 -9, 0 -10, -7 -7, -10 0, -7 7, 0 10, 90 10))',
       'LINESTRING(0 0, 100 0, 100 100)',
       10,
       { :quad_segs => 2, :join => :mitre, :mitre_limit => 1.0 }
-    ]
+    )
 
     # Single-sided buffering
-    tester[
+    snapped_tester(
+      :buffer,
       'POLYGON ((100 0, 0 0, 0 10, 100 10, 100 0))',
       'LINESTRING(0 0, 100 0)',
       10,
       { :single_sided => true }
-    ]
+    )
 
-    tester[
+    snapped_tester(
+      :buffer,
       'POLYGON ((0 0, 100 0, 100 -10, 0 -10, 0 0))',
       'LINESTRING(0 0, 100 0)',
       -10,
       { :single_sided => true }
-    ]
+    )
   end
 
   def test_convex_hull
@@ -138,437 +134,347 @@ class GeometryTests < MiniTest::Unit::TestCase
   def test_difference
     comparison_tester(
       :difference,
+      'GEOMETRYCOLLECTION EMPTY',
       'POINT(0 0)',
+      'POINT(0 0)'
+    )
+
+    comparison_tester(
+      :difference,
+      'POINT (0 0)',
       'POINT(0 0)',
-      'GEOMETRYCOLLECTION EMPTY'
+      'POINT(1 0)'
     )
 
     comparison_tester(
       :difference,
-      'POINT(0 0)',
-      'POINT(1 0)',
-      'POINT (0 0)'
-    )
-
-    comparison_tester(
-      :difference,
+      'LINESTRING (0 0, 10 0)',
       'LINESTRING(0 0, 10 0)',
+      'POINT(5 0)'
+    )
+
+    comparison_tester(
+      :difference,
+      'GEOMETRYCOLLECTION EMPTY',
       'POINT(5 0)',
-      'LINESTRING (0 0, 10 0)'
+      'LINESTRING(0 0, 10 0)'
     )
 
     comparison_tester(
       :difference,
+      'POINT (5 0)',
       'POINT(5 0)',
+      'LINESTRING(0 1, 10 1)'
+    )
+
+    comparison_tester(
+      :difference,
+      'MULTILINESTRING ((0 0, 5 0), (5 0, 10 0))',
       'LINESTRING(0 0, 10 0)',
-      'GEOMETRYCOLLECTION EMPTY'
+      'LINESTRING(5 -10, 5 10)'
     )
 
     comparison_tester(
       :difference,
-      'POINT(5 0)',
-      'LINESTRING(0 1, 10 1)',
-      'POINT (5 0)'
-    )
-
-    comparison_tester(
-      :difference,
+      'LINESTRING (0 0, 5 0)',
       'LINESTRING(0 0, 10 0)',
-      'LINESTRING(5 -10, 5 10)',
-      'MULTILINESTRING ((0 0, 5 0), (5 0, 10 0))'
+      'LINESTRING(5 0, 20 0)'
     )
 
     comparison_tester(
       :difference,
-      'LINESTRING(0 0, 10 0)',
-      'LINESTRING(5 0, 20 0)',
-      'LINESTRING (0 0, 5 0)'
-    )
-
-    comparison_tester(
-      :difference,
+      'POLYGON ((5 0, 0 0, 0 10, 5 10, 10 10, 10 0, 5 0))',
       'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))',
-      'LINESTRING(5 -10, 5 10)',
-      'POLYGON ((5 0, 0 0, 0 10, 5 10, 10 10, 10 0, 5 0))'
+      'LINESTRING(5 -10, 5 10)'
     )
 
     comparison_tester(
       :difference,
+      'POLYGON ((10 0, 0 0, 0 10, 10 10, 10 0))',
       'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))',
-      'LINESTRING(10 0, 20 0)',
-      'POLYGON ((10 0, 0 0, 0 10, 10 10, 10 0))'
+      'LINESTRING(10 0, 20 0)'
     )
 
     comparison_tester(
       :difference,
+      'POLYGON ((5 0, 0 0, 0 10, 10 10, 10 5, 5 5, 5 0))',
       'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))',
-      'POLYGON((5 -5, 5 5, 15 5, 15 -5, 5 -5))',
-      'POLYGON ((5 0, 0 0, 0 10, 10 10, 10 5, 5 5, 5 0))'
+      'POLYGON((5 -5, 5 5, 15 5, 15 -5, 5 -5))'
     )
   end
 
   def test_sym_difference
-    comparison_tester(
-      :sym_difference,
-      'POINT(0 0)',
-      'POINT(0 0)',
-      'GEOMETRYCOLLECTION EMPTY'
-    )
+    %w{ sym_difference symmetric_difference }.each do |method|
+      comparison_tester(
+        method,
+        'GEOMETRYCOLLECTION EMPTY',
+        'POINT(0 0)',
+        'POINT(0 0)'
+      )
 
-    comparison_tester(
-      :sym_difference,
-      'POINT(0 0)',
-      'POINT(1 0)',
-      'MULTIPOINT (0 0, 1 0)'
-    )
+      comparison_tester(
+        method,
+        'MULTIPOINT (0 0, 1 0)',
+        'POINT(0 0)',
+        'POINT(1 0)'
+      )
 
-    comparison_tester(
-      :sym_difference,
-      'LINESTRING(0 0, 10 0)',
-      'POINT(5 0)',
-      'LINESTRING (0 0, 10 0)'
-    )
+      comparison_tester(
+        method,
+        'LINESTRING (0 0, 10 0)',
+        'LINESTRING(0 0, 10 0)',
+        'POINT(5 0)'
+      )
 
-    comparison_tester(
-      :sym_difference,
-      'POINT(5 0)',
-      'LINESTRING(0 0, 10 0)',
-      'LINESTRING (0 0, 10 0)'
-    )
+      comparison_tester(
+        method,
+        'LINESTRING (0 0, 10 0)',
+        'POINT(5 0)',
+        'LINESTRING(0 0, 10 0)'
+      )
 
-    comparison_tester(
-      :sym_difference,
-      'POINT(5 0)',
-      'LINESTRING(0 1, 10 1)',
-      'GEOMETRYCOLLECTION (POINT (5 0), LINESTRING (0 1, 10 1))'
-    )
+      comparison_tester(
+        method,
+        'GEOMETRYCOLLECTION (POINT (5 0), LINESTRING (0 1, 10 1))',
+        'POINT(5 0)',
+        'LINESTRING(0 1, 10 1)'
+      )
 
-    comparison_tester(
-      :sym_difference,
-      'LINESTRING(0 0, 10 0)',
-      'LINESTRING(5 -10, 5 10)',
-      'MULTILINESTRING ((0 0, 5 0), (5 0, 10 0), (5 -10, 5 0), (5 0, 5 10))'
-    )
+      comparison_tester(
+        method,
+        'MULTILINESTRING ((0 0, 5 0), (5 0, 10 0), (5 -10, 5 0), (5 0, 5 10))',
+        'LINESTRING(0 0, 10 0)',
+        'LINESTRING(5 -10, 5 10)'
+      )
 
-    comparison_tester(
-      :sym_difference,
-      'LINESTRING(0 0, 10 0)',
-      'LINESTRING(5 0, 20 0)',
-      'MULTILINESTRING ((0 0, 5 0), (10 0, 20 0))'
-    )
+      comparison_tester(
+        method,
+        'MULTILINESTRING ((0 0, 5 0), (10 0, 20 0))',
+        'LINESTRING(0 0, 10 0)',
+        'LINESTRING(5 0, 20 0)'
+      )
 
-    comparison_tester(
-      :sym_difference,
-      'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))',
-      'LINESTRING(5 -10, 5 10)',
-      'GEOMETRYCOLLECTION (LINESTRING (5 -10, 5 0), POLYGON ((5 0, 0 0, 0 10, 5 10, 10 10, 10 0, 5 0)))'
-    )
+      comparison_tester(
+        method,
+        'GEOMETRYCOLLECTION (LINESTRING (5 -10, 5 0), POLYGON ((5 0, 0 0, 0 10, 5 10, 10 10, 10 0, 5 0)))',
+        'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))',
+        'LINESTRING(5 -10, 5 10)'
+      )
 
-    comparison_tester(
-      :sym_difference,
-      'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))',
-      'LINESTRING(10 0, 20 0)',
-      'GEOMETRYCOLLECTION (LINESTRING (10 0, 20 0), POLYGON ((10 0, 0 0, 0 10, 10 10, 10 0)))'
-    )
+      comparison_tester(
+        method,
+        'GEOMETRYCOLLECTION (LINESTRING (10 0, 20 0), POLYGON ((10 0, 0 0, 0 10, 10 10, 10 0)))',
+        'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))',
+        'LINESTRING(10 0, 20 0)'
+      )
 
-    comparison_tester(
-      :sym_difference,
-      'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))',
-      'POLYGON((5 -5, 5 5, 15 5, 15 -5, 5 -5))',
-      'MULTIPOLYGON (((5 0, 0 0, 0 10, 10 10, 10 5, 5 5, 5 0)), ((5 0, 10 0, 10 5, 15 5, 15 -5, 5 -5, 5 0)))'
-    )
-  end
-
-  def test_symmetric_difference
-    comparison_tester(
-      :symmetric_difference,
-      'POINT(0 0)',
-      'POINT(0 0)',
-      'GEOMETRYCOLLECTION EMPTY'
-    )
-
-    comparison_tester(
-      :symmetric_difference,
-      'POINT(0 0)',
-      'POINT(1 0)',
-      'MULTIPOINT (0 0, 1 0)'
-    )
-
-    comparison_tester(
-      :symmetric_difference,
-      'LINESTRING(0 0, 10 0)',
-      'POINT(5 0)',
-      'LINESTRING (0 0, 10 0)'
-    )
-
-    comparison_tester(
-      :symmetric_difference,
-      'POINT(5 0)',
-      'LINESTRING(0 0, 10 0)',
-      'LINESTRING (0 0, 10 0)'
-    )
-
-    comparison_tester(
-      :symmetric_difference,
-      'POINT(5 0)',
-      'LINESTRING(0 1, 10 1)',
-      'GEOMETRYCOLLECTION (POINT (5 0), LINESTRING (0 1, 10 1))'
-    )
-
-    comparison_tester(
-      :symmetric_difference,
-      'LINESTRING(0 0, 10 0)',
-      'LINESTRING(5 -10, 5 10)',
-      'MULTILINESTRING ((0 0, 5 0), (5 0, 10 0), (5 -10, 5 0), (5 0, 5 10))'
-    )
-
-    comparison_tester(
-      :symmetric_difference,
-      'LINESTRING(0 0, 10 0)',
-      'LINESTRING(5 0, 20 0)',
-      'MULTILINESTRING ((0 0, 5 0), (10 0, 20 0))'
-    )
-
-    comparison_tester(
-      :symmetric_difference,
-      'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))',
-      'LINESTRING(5 -10, 5 10)',
-      'GEOMETRYCOLLECTION (LINESTRING (5 -10, 5 0), POLYGON ((5 0, 0 0, 0 10, 5 10, 10 10, 10 0, 5 0)))'
-    )
-
-    comparison_tester(
-      :symmetric_difference,
-      'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))',
-      'LINESTRING(10 0, 20 0)',
-      'GEOMETRYCOLLECTION (LINESTRING (10 0, 20 0), POLYGON ((10 0, 0 0, 0 10, 10 10, 10 0)))'
-    )
-
-    comparison_tester(
-      :symmetric_difference,
-      'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))',
-      'POLYGON((5 -5, 5 5, 15 5, 15 -5, 5 -5))',
-      'MULTIPOLYGON (((5 0, 0 0, 0 10, 10 10, 10 5, 5 5, 5 0)), ((5 0, 10 0, 10 5, 15 5, 15 -5, 5 -5, 5 0)))'
-    )
+      comparison_tester(
+        method,
+        'MULTIPOLYGON (((5 0, 0 0, 0 10, 10 10, 10 5, 5 5, 5 0)), ((5 0, 10 0, 10 5, 15 5, 15 -5, 5 -5, 5 0)))',
+        'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))',
+        'POLYGON((5 -5, 5 5, 15 5, 15 -5, 5 -5))'
+      )
+    end
   end
 
   def test_boundary
-    self_tester(
+    simple_tester(
       :boundary,
-      'POINT(0 0)',
-      'GEOMETRYCOLLECTION EMPTY'
+      'GEOMETRYCOLLECTION EMPTY',
+      'POINT(0 0)'
     )
 
-    self_tester(
+    simple_tester(
       :boundary,
-      'LINESTRING(0 0, 10 10)',
-      'MULTIPOINT (0 0, 10 10)'
+      'MULTIPOINT (0 0, 10 10)',
+      'LINESTRING(0 0, 10 10)'
     )
 
-    self_tester(
+    simple_tester(
       :boundary,
-      'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0),( 5 5, 5 6, 6 6, 6 5, 5 5))',
-      'MULTILINESTRING ((0 0, 10 0, 10 10, 0 10, 0 0), (5 5, 5 6, 6 6, 6 5, 5 5))'
+      'MULTILINESTRING ((0 0, 10 0, 10 10, 0 10, 0 0), (5 5, 5 6, 6 6, 6 5, 5 5))',
+      'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0),( 5 5, 5 6, 6 6, 6 5, 5 5))'
     )
   end
 
   def test_union
     comparison_tester(
       :union,
+      'POINT (0 0)',
       'POINT(0 0)',
+      'POINT(0 0)'
+    )
+
+    comparison_tester(
+      :union,
+      'MULTIPOINT (0 0, 1 0)',
       'POINT(0 0)',
-      'POINT (0 0)'
+      'POINT(1 0)'
     )
 
     comparison_tester(
       :union,
-      'POINT(0 0)',
-      'POINT(1 0)',
-      'MULTIPOINT (0 0, 1 0)'
-    )
-
-    comparison_tester(
-      :union,
+      'LINESTRING (0 0, 10 0)',
       'LINESTRING(0 0, 10 0)',
+      'POINT(5 0)'
+    )
+
+    comparison_tester(
+      :union,
+      'LINESTRING (0 0, 10 0)',
       'POINT(5 0)',
-      'LINESTRING (0 0, 10 0)'
+      'LINESTRING(0 0, 10 0)'
     )
 
     comparison_tester(
       :union,
+      'GEOMETRYCOLLECTION (POINT (5 0), LINESTRING (0 1, 10 1))',
       'POINT(5 0)',
+      'LINESTRING(0 1, 10 1)'
+    )
+
+    comparison_tester(
+      :union,
+      'MULTILINESTRING ((0 0, 5 0), (5 0, 10 0), (5 -10, 5 0), (5 0, 5 10))',
       'LINESTRING(0 0, 10 0)',
-      'LINESTRING (0 0, 10 0)'
+      'LINESTRING(5 -10, 5 10)'
     )
 
     comparison_tester(
       :union,
-      'POINT(5 0)',
-      'LINESTRING(0 1, 10 1)',
-      'GEOMETRYCOLLECTION (POINT (5 0), LINESTRING (0 1, 10 1))'
-    )
-
-    comparison_tester(
-      :union,
+      'MULTILINESTRING ((0 0, 5 0), (5 0, 10 0), (10 0, 20 0))',
       'LINESTRING(0 0, 10 0)',
-      'LINESTRING(5 -10, 5 10)',
-      'MULTILINESTRING ((0 0, 5 0), (5 0, 10 0), (5 -10, 5 0), (5 0, 5 10))'
+      'LINESTRING(5 0, 20 0)'
     )
 
     comparison_tester(
       :union,
-      'LINESTRING(0 0, 10 0)',
-      'LINESTRING(5 0, 20 0)',
-      'MULTILINESTRING ((0 0, 5 0), (5 0, 10 0), (10 0, 20 0))'
-    )
-
-    comparison_tester(
-      :union,
+      'GEOMETRYCOLLECTION (LINESTRING (5 -10, 5 0), POLYGON ((5 0, 0 0, 0 10, 5 10, 10 10, 10 0, 5 0)))',
       'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))',
-      'LINESTRING(5 -10, 5 10)',
-      'GEOMETRYCOLLECTION (LINESTRING (5 -10, 5 0), POLYGON ((5 0, 0 0, 0 10, 5 10, 10 10, 10 0, 5 0)))'
+      'LINESTRING(5 -10, 5 10)'
     )
 
     comparison_tester(
       :union,
+      'GEOMETRYCOLLECTION (LINESTRING (10 0, 20 0), POLYGON ((10 0, 0 0, 0 10, 10 10, 10 0)))',
       'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))',
-      'LINESTRING(10 0, 20 0)',
-      'GEOMETRYCOLLECTION (LINESTRING (10 0, 20 0), POLYGON ((10 0, 0 0, 0 10, 10 10, 10 0)))'
+      'LINESTRING(10 0, 20 0)'
     )
 
     comparison_tester(
       :union,
+      'POLYGON ((5 0, 0 0, 0 10, 10 10, 10 5, 15 5, 15 -5, 5 -5, 5 0))',
       'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))',
-      'POLYGON((5 -5, 5 5, 15 5, 15 -5, 5 -5))',
-      'POLYGON ((5 0, 0 0, 0 10, 10 10, 10 5, 15 5, 15 -5, 5 -5, 5 0))'
+      'POLYGON((5 -5, 5 5, 15 5, 15 -5, 5 -5))'
     )
   end
 
   if ENV['FORCE_TESTS'] || Geos::Geometry.method_defined?(:union_cascaded)
     def test_union_cascaded
-      self_tester(
+
+      simple_tester(
         :union_cascaded,
+        'POLYGON ((1 0, 0 0, 0 1, 0 11, 10 11, 10 14, 14 14, 14 10, 11 10, 11 0, 1 0), (11 11, 12 11, 12 12, 11 12, 11 11))',
         'MULTIPOLYGON(
           ((0 0, 1 0, 1 1, 0 1, 0 0)),
           ((10 10, 10 14, 14 14, 14 10, 10 10),
           (11 11, 11 12, 12 12, 12 11, 11 11)),
           ((0 0, 11 0, 11 11, 0 11, 0 0))
-        ))',
-        'POLYGON ((
-          1 0, 0 0, 0 1, 0 11, 10 11,
-          10 14, 14 14, 14 10, 11 10,
-          11 0, 1 0
-        ), (11 11, 12 11, 12 12, 11 12, 11 11))'
+        ))'
       )
     end
   end
 
   if ENV['FORCE_TESTS'] || Geos::Geometry.method_defined?(:unary_union)
     def test_unary_union
-      self_tester(
+
+      simple_tester(
         :unary_union,
+        'POLYGON ((1 0, 0 0, 0 1, 0 11, 10 11, 10 14, 14 14, 14 10, 11 10, 11 0, 1 0), (11 11, 12 11, 12 12, 11 12, 11 11))',
         'MULTIPOLYGON(
           ((0 0, 1 0, 1 1, 0 1, 0 0)),
           ((10 10, 10 14, 14 14, 14 10, 10 10),
           (11 11, 11 12, 12 12, 12 11, 11 11)),
           ((0 0, 11 0, 11 11, 0 11, 0 0))
-        ))',
-        'POLYGON ((
-          1 0, 0 0, 0 1, 0 11, 10 11,
-          10 14, 14 14, 14 10, 11 10,
-          11 0, 1 0
-        ), (11 11, 12 11, 12 12, 11 12, 11 11))'
+        ))'
       )
     end
   end
 
   def test_union_without_arguments
-    self_tester(
+    simple_tester(
       :union,
+      'POLYGON ((1 0, 0 0, 0 1, 0 11, 10 11, 10 14, 14 14, 14 10, 11 10, 11 0, 1 0), (11 11, 12 11, 12 12, 11 12, 11 11))',
       'MULTIPOLYGON(
         ((0 0, 1 0, 1 1, 0 1, 0 0)),
         ((10 10, 10 14, 14 14, 14 10, 10 10),
         (11 11, 11 12, 12 12, 12 11, 11 11)),
         ((0 0, 11 0, 11 11, 0 11, 0 0))
-      ))',
-      'POLYGON ((
-        1 0, 0 0, 0 1, 0 11, 10 11,
-        10 14, 14 14, 14 10, 11 10,
-        11 0, 1 0
-      ), (11 11, 12 11, 12 12, 11 12, 11 11))'
+      ))'
     )
   end
 
   def test_point_on_surface
-    self_tester(
-      :point_on_surface,
-      'POINT(0 0)',
-      'POINT(0 0)'
-    )
+    %w{
+      point_on_surface
+      representative_point
+    }.each do |method|
+      simple_tester(
+        method,
+        'POINT (0 0)',
+        'POINT (0 0)'
+      )
 
-    self_tester(
-      :point_on_surface,
-      'LINESTRING(0 0, 5 5, 10 10)',
-      'POINT (5 5)'
-    )
+      simple_tester(
+        method,
+        'POINT (5 5)',
+        'LINESTRING (0 0, 5 5, 10 10)'
+      )
 
-    self_tester(
-      :point_on_surface,
-      'POLYGON((0 0, 0 10, 5 5, 10 10, 10 0, 0 0))',
-      'POINT (2.5 5)'
-    )
-  end
-
-  def test_representative_point
-    self_tester(
-      :representative_point,
-      'POINT(0 0)',
-      'POINT(0 0)'
-    )
-
-    self_tester(
-      :representative_point,
-      'LINESTRING(0 0, 5 5, 10 10)',
-      'POINT (5 5)'
-    )
-
-    self_tester(
-      :representative_point,
-      'POLYGON((0 0, 0 10, 5 5, 10 10, 10 0, 0 0))',
-      'POINT (2.5 5)'
-    )
+      simple_tester(
+        method,
+        'POINT (2.5 5)',
+        'POLYGON ((0 0, 0 10, 5 5, 10 10, 10 0, 0 0))'
+      )
+    end
   end
 
   def test_centroid
-    self_tester(
-      :centroid,
-      'POINT(0 0)',
-      'POINT (0 0)'
-    )
+    %w{
+      centroid
+      center
+    }.each do |method|
+      simple_tester(
+        method,
+        'POINT (0 0)',
+        'POINT(0 0)'
+      )
 
-    self_tester(
-      :centroid,
-      'LINESTRING(0 0, 10 10)',
-      'POINT (5 5)'
-    )
+      simple_tester(
+        method,
+        'POINT (5 5)',
+        'LINESTRING(0 0, 10 10)'
+      )
 
-    self_tester(
-      :centroid,
-      'POLYGON((0 0, 0 10, 5 5, 10 10, 10 0, 0 0))',
-      'POINT (5 3.888888888888888888)'
-    )
+      snapped_tester(
+        method,
+        'POINT (5 4)',
+        'POLYGON((0 0, 0 10, 5 5, 10 10, 10 0, 0 0))'
+      )
+    end
   end
 
   def test_envelope
-    self_tester(
+    simple_tester(
       :envelope,
-      'POINT(0 0)',
-      'POINT (0 0)'
+      'POINT (0 0)',
+      'POINT(0 0)'
     )
 
-    self_tester(
+    simple_tester(
       :envelope,
-      'LINESTRING(0 0, 10 10)',
-      'POLYGON ((0 0, 10 0, 10 10, 0 10, 0 0))'
+      'POLYGON ((0 0, 10 0, 10 10, 0 10, 0 0))',
+      'LINESTRING(0 0, 10 10)'
     )
   end
 
@@ -632,38 +538,38 @@ class GeometryTests < MiniTest::Unit::TestCase
   end
 
   def test_line_merge
-    self_tester(
+    simple_tester(
       :line_merge,
+      'LINESTRING (0 0, 10 10, 10 0, 5 0, 5 -5)',
       'MULTILINESTRING(
         (0 0, 10 10),
         (10 10, 10 0),
         (5 0, 10 0),
         (5 -5, 5 0)
-            )',
-      'LINESTRING (0 0, 10 10, 10 0, 5 0, 5 -5)'
+      )'
     )
   end
 
   def test_simplify
-    self_tester(
-      [ :simplify, 2 ],
+    simple_tester(
+      :simplify,
+      'LINESTRING (0 0, 5 10, 10 0, 10 9, 0 9)',
       'LINESTRING(0 0, 3 4, 5 10, 10 0, 10 9, 5 11, 0 9)',
-      'LINESTRING (0 0, 5 10, 10 0, 10 9, 0 9)'
+      2
     )
   end
 
   def test_topology_preserve_simplify
-    self_tester(
-      [ :topology_preserve_simplify, 2 ],
+    simple_tester(
+      :topology_preserve_simplify,
+      'LINESTRING (0 0, 5 10, 10 0, 10 9, 5 11, 0 9)',
       'LINESTRING(0 0, 3 4, 5 10, 10 0, 10 9, 5 11, 0 9)',
-      'LINESTRING (0 0, 5 10, 10 0, 10 9, 5 11, 0 9)'
+      2
     )
   end
 
   if ENV['FORCE_TESTS'] || Geos::Geometry.method_defined?(:extract_unique_points)
     def test_extract_unique_points
-      writer.rounding_precision = 0
-
       geom = read('GEOMETRYCOLLECTION (
         MULTIPOLYGON (
           ((0 0, 1 0, 1 1, 0 1, 0 0)),
@@ -679,9 +585,10 @@ class GeometryTests < MiniTest::Unit::TestCase
         LINESTRING EMPTY
       ')
 
-      assert_equal(
+      simple_tester(
+        :extract_unique_points,
         'MULTIPOINT (0 0, 1 0, 1 1, 0 1, 10 10, 10 14, 14 14, 14 10, 11 11, 11 12, 12 12, 12 11, 2 3, 3 4, 9 0)',
-        write(geom.extract_unique_points)
+        geom.extract_unique_points
       )
     end
   end
@@ -844,11 +751,9 @@ class GeometryTests < MiniTest::Unit::TestCase
         assert_equal(location, write(ret[:location]))
       }
 
-      writer.rounding_precision = 0
-
       assert_nil(read('POINT(0 0)').valid_detail)
       tester["Invalid Coordinate", 'POINT (0 nan)', 'POINT(0 NaN)', 0]
-      tester["Self-intersection", 'POINT (2 5)', 'POLYGON((0 0, 0 5, 5 5, 5 10, 0 0))', 0]
+      tester["Self-intersection", 'POINT (2.5 5)', 'POLYGON((0 0, 0 5, 5 5, 5 10, 0 0))', 0]
 
       tester["Ring Self-intersection", 'POINT (0 0)', 'POLYGON((0 0, -10 10, 10 10, 0 0, 4 5, -4 5, 0 0)))', 0]
 
@@ -876,22 +781,17 @@ class GeometryTests < MiniTest::Unit::TestCase
   end
 
   def test_num_geometries
-    tester = lambda { |expected, g|
-      geom = read(g)
-      assert_equal(expected, geom.num_geometries)
-    }
-
-    tester[1, 'POINT(0 0)']
-    tester[2, 'MULTIPOINT (0 1, 2 3)']
-    tester[1, 'LINESTRING (0 0, 2 3)']
-    tester[2, 'MULTILINESTRING ((0 1, 2 3), (10 10, 3 4))']
-    tester[1, 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))']
-    tester[2, 'MULTIPOLYGON(
+    simple_tester(:num_geometries, 1, 'POINT(0 0)')
+    simple_tester(:num_geometries, 2, 'MULTIPOINT (0 1, 2 3)')
+    simple_tester(:num_geometries, 1, 'LINESTRING (0 0, 2 3)')
+    simple_tester(:num_geometries, 2, 'MULTILINESTRING ((0 1, 2 3), (10 10, 3 4))')
+    simple_tester(:num_geometries, 1, 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))')
+    simple_tester(:num_geometries, 2, 'MULTIPOLYGON(
       ((0 0, 1 0, 1 1, 0 1, 0 0)),
       ((10 10, 10 14, 14 14, 14 10, 10 10),
       (11 11, 11 12, 12 12, 12 11, 11 11)))'
-    ]
-    tester[6, 'GEOMETRYCOLLECTION (
+    )
+    simple_tester(:num_geometries, 6, 'GEOMETRYCOLLECTION (
       MULTIPOLYGON (
         ((0 0, 1 0, 1 1, 0 1, 0 0)),
         ((10 10, 10 14, 14 14, 14 10, 10 10),
@@ -902,73 +802,48 @@ class GeometryTests < MiniTest::Unit::TestCase
       LINESTRING (0 0, 2 3),
       MULTIPOINT (0 0, 2 3),
       POINT (9 0))'
-    ]
+    )
   end
 
   # get_geometry_n is segfaulting in the binary GEOS build
   if defined?(Geos::FFIGeos)
     def test_get_geometry_n
-      tester = lambda { |expected, g, n|
-        geom = read(g)
-        result = geom.get_geometry_n(n)
-
-        if expected.nil?
-          assert_nil(result)
-        else
-          assert_geom_eql_exact(result, read(expected))
-        end
-      }
-
-      tester['POINT(0 1)', 'MULTIPOINT (0 1, 2 3)', 0]
-      tester['POINT(2 3)', 'MULTIPOINT (0 1, 2 3)', 1]
-      tester[nil, 'MULTIPOINT (0 1, 2 3)', 2]
+      simple_tester(:get_geometry_n, 'POINT (0 1)', 'MULTIPOINT (0 1, 2 3)', 0)
+      simple_tester(:get_geometry_n, 'POINT (2 3)', 'MULTIPOINT (0 1, 2 3)', 1)
+      simple_tester(:get_geometry_n, nil, 'MULTIPOINT (0 1, 2 3)', 2)
     end
   end
 
   def test_num_interior_rings
-    tester = lambda { |expected, g|
-      geom = read(g)
-      assert_equal(expected, geom.num_interior_rings)
-    }
-
-    tester[0, 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))']
-    tester[1, 'POLYGON (
+    simple_tester(:num_interior_rings, 0, 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))')
+    simple_tester(:num_interior_rings, 1, 'POLYGON (
       (10 10, 10 14, 14 14, 14 10, 10 10),
       (11 11, 11 12, 12 12, 12 11, 11 11)
-    )']
-    tester[2, 'POLYGON (
+    )')
+    simple_tester(:num_interior_rings, 2, 'POLYGON (
       (10 10, 10 14, 14 14, 14 10, 10 10),
       (11 11, 11 12, 12 12, 12 11, 11 11),
       (13 11, 13 12, 13.5 12, 13.5 11, 13 11))'
-    ]
+    )
 
     assert_raises(NoMethodError) do
-      tester[0, 'POINT (0 0)']
+      read('POINT (0 0)').num_interior_rings
     end
   end
 
   def test_interior_ring_n
-    tester = lambda { |expected, g, n|
-      geom = read(g)
-      result = geom.interior_ring_n(n)
-
-      if expected.nil?
-        assert_nil(result)
-      else
-        assert_geom_eql_exact(result, read(expected))
-      end
-    }
-
-    tester[
-      'LINEARRING(11 11, 11 12, 12 12, 12 11, 11 11)',
+    simple_tester(
+      :interior_ring_n,
+      'LINEARRING (11 11, 11 12, 12 12, 12 11, 11 11)',
       'POLYGON(
         (10 10, 10 14, 14 14, 14 10, 10 10),
         (11 11, 11 12, 12 12, 12 11, 11 11)
       )',
       0
-    ]
+    )
 
-    tester[
+    simple_tester(
+      :interior_ring_n,
       'LINEARRING (11 11, 11 12, 12 12, 12 11, 11 11)',
       'POLYGON (
         (10 10, 10 14, 14 14, 14 10, 10 10),
@@ -976,9 +851,10 @@ class GeometryTests < MiniTest::Unit::TestCase
         (13 11, 13 12, 13.5 12, 13.5 11, 13 11)
       )',
       0
-    ]
+    )
 
-    tester[
+    simple_tester(
+      :interior_ring_n,
       'LINEARRING (13 11, 13 12, 13.5 12, 13.5 11, 13 11)',
       'POLYGON (
         (10 10, 10 14, 14 14, 14 10, 10 10),
@@ -986,76 +862,54 @@ class GeometryTests < MiniTest::Unit::TestCase
         (13 11, 13 12, 13.5 12, 13.5 11, 13 11)
       )',
       1
-    ]
+    )
 
     assert_raises(RuntimeError) do
-      tester[
+      simple_tester(
+        :interior_ring_n,
         nil,
         'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))',
         0
-      ]
+      )
     end
 
     assert_raises(NoMethodError) do
-      tester[
+      simple_tester(
+        :interior_ring_n,
         nil,
         'POINT (0 0)',
         0
-      ]
+      )
     end
   end
 
   def test_exterior_ring
-    tester = lambda { |expected, g|
-      geom = read(g)
-      result = geom.exterior_ring
-
-      if expected.nil?
-        assert_nil(result)
-      else
-        assert_geom_eql_exact(result, read(expected))
-      end
-    }
-
-    tester[
+    simple_tester(
+      :exterior_ring,
       'LINEARRING (10 10, 10 14, 14 14, 14 10, 10 10)',
       'POLYGON (
         (10 10, 10 14, 14 14, 14 10, 10 10),
         (11 11, 11 12, 12 12, 12 11, 11 11)
       )'
-    ]
+    )
 
     assert_raises(NoMethodError) do
-      tester[
-        nil,
-        'POINT (0 0)'
-      ]
+      read('POINT (0 0)').exterior_ring
     end
   end
 
   def test_interior_rings
-    tester = lambda { |expected, g|
-      geom = read(g)
-      result = geom.interior_rings
-
-      if expected.nil?
-        assert_nil(result)
-      else
-        assert_equal(expected, result.collect { |r| write(r) } )
-      end
-    }
-
-    writer.trim = true
-
-    tester[
+    array_tester(
+      :interior_rings,
       [ 'LINEARRING (11 11, 11 12, 12 12, 12 11, 11 11)' ],
       'POLYGON(
         (10 10, 10 14, 14 14, 14 10, 10 10),
         (11 11, 11 12, 12 12, 12 11, 11 11)
       )'
-    ]
+    )
 
-    tester[
+    array_tester(
+      :interior_rings,
       [
         'LINEARRING (11 11, 11 12, 12 12, 12 11, 11 11)',
         'LINEARRING (13 11, 13 12, 13.5 12, 13.5 11, 13 11)'
@@ -1065,29 +919,22 @@ class GeometryTests < MiniTest::Unit::TestCase
         (11 11, 11 12, 12 12, 12 11, 11 11),
         (13 11, 13 12, 13.5 12, 13.5 11, 13 11)
       )'
-    ]
+    )
   end
 
   if ENV['FORCE_TESTS'] || Geos::Geometry.method_defined?(:num_coordinates)
     def test_num_coordinates
-      tester = lambda { |expected, g|
-        geom = read(g)
-        result = geom.num_coordinates
-
-        assert_equal(expected, result)
-      }
-
-      tester[1, 'POINT(0 0)']
-      tester[2, 'MULTIPOINT (0 1, 2 3)']
-      tester[2, 'LINESTRING (0 0, 2 3)']
-      tester[4, 'MULTILINESTRING ((0 1, 2 3), (10 10, 3 4))']
-      tester[5, 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))']
-      tester[15, 'MULTIPOLYGON (
+      simple_tester(:num_coordinates, 1, 'POINT(0 0)')
+      simple_tester(:num_coordinates, 2, 'MULTIPOINT (0 1, 2 3)')
+      simple_tester(:num_coordinates, 2, 'LINESTRING (0 0, 2 3)')
+      simple_tester(:num_coordinates, 4, 'MULTILINESTRING ((0 1, 2 3), (10 10, 3 4))')
+      simple_tester(:num_coordinates, 5, 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))')
+      simple_tester(:num_coordinates, 15, 'MULTIPOLYGON (
         ((0 0, 1 0, 1 1, 0 1, 0 0)),
         ((10 10, 10 14, 14 14, 14 10, 10 10),
         (11 11, 11 12, 12 12, 12 11, 11 11))
-      )']
-      tester[29, 'GEOMETRYCOLLECTION (
+      )')
+      simple_tester(:num_coordinates, 29, 'GEOMETRYCOLLECTION (
         MULTIPOLYGON (
           ((0 0, 1 0, 1 1, 0 1, 0 0)),
           ((10 10, 10 14, 14 14, 14 10, 10 10),
@@ -1098,7 +945,7 @@ class GeometryTests < MiniTest::Unit::TestCase
         LINESTRING (0 0, 2 3),
         MULTIPOINT ((0 0), (2 3)),
         POINT (9 0)
-      )']
+      )')
     end
   end
 
@@ -1118,13 +965,6 @@ class GeometryTests < MiniTest::Unit::TestCase
   end
 
   def test_dimensions
-    tester = lambda { |expected, g|
-      geom = read(g)
-      result = geom.dimensions
-
-      assert_equal(expected, result)
-    }
-
     types = {
       :dontcare => -3,
       :non_empty => -2,
@@ -1134,17 +974,17 @@ class GeometryTests < MiniTest::Unit::TestCase
       :surface => 2
     }
 
-    tester[types[:point], 'POINT(0 0)']
-    tester[types[:point], 'MULTIPOINT (0 1, 2 3)']
-    tester[types[:curve], 'LINESTRING (0 0, 2 3)']
-    tester[types[:curve], 'MULTILINESTRING ((0 1, 2 3), (10 10, 3 4))']
-    tester[types[:surface], 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))']
-    tester[types[:surface], 'MULTIPOLYGON (
+    simple_tester(:dimensions, types[:point], 'POINT(0 0)')
+    simple_tester(:dimensions, types[:point], 'MULTIPOINT (0 1, 2 3)')
+    simple_tester(:dimensions, types[:curve], 'LINESTRING (0 0, 2 3)')
+    simple_tester(:dimensions, types[:curve], 'MULTILINESTRING ((0 1, 2 3), (10 10, 3 4))')
+    simple_tester(:dimensions, types[:surface], 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))')
+    simple_tester(:dimensions, types[:surface], 'MULTIPOLYGON (
       ((0 0, 1 0, 1 1, 0 1, 0 0)),
       ((10 10, 10 14, 14 14, 14 10, 10 10),
-      (11 11, 11 12, 12 12, 12 11, 11 11)))'
-    ]
-    tester[types[:surface], 'GEOMETRYCOLLECTION (
+      (11 11, 11 12, 12 12, 12 11, 11 11))
+    )')
+    simple_tester(:dimensions, types[:surface], 'GEOMETRYCOLLECTION (
       MULTIPOLYGON (
         ((0 0, 1 0, 1 1, 0 1, 0 0)),
         ((10 10, 10 14, 14 14, 14 10, 10 10),
@@ -1155,7 +995,7 @@ class GeometryTests < MiniTest::Unit::TestCase
       LINESTRING (0 0, 2 3),
       MULTIPOINT (0 0, 2 3),
       POINT (9 0)
-    )']
+    )')
   end
 
   if ENV['FORCE_TESTS'] || Geos::Geometry.method_defined?(:project)
@@ -1194,21 +1034,14 @@ class GeometryTests < MiniTest::Unit::TestCase
 
   if ENV['FORCE_TESTS'] || Geos::Geometry.method_defined?(:interpolate)
     def test_interpolate
-      tester = lambda { |expected, g, d, normalize|
-        geom = read(g)
-        assert_equal(expected, write(geom.interpolate(d, normalize)))
-      }
+      simple_tester(:interpolate, 'POINT (0 0)', 'LINESTRING(0 0, 10 0)', 0, false)
+      simple_tester(:interpolate, 'POINT (0 0)', 'LINESTRING(0 0, 10 0)', 0, true)
 
-      writer.trim = true
+      simple_tester(:interpolate, 'POINT (5 0)', 'LINESTRING(0 0, 10 0)', 5, false)
+      simple_tester(:interpolate, 'POINT (5 0)', 'LINESTRING(0 0, 10 0)', 0.5, true)
 
-      tester['POINT (0 0)', 'LINESTRING(0 0, 10 0)', 0, false]
-      tester['POINT (0 0)', 'LINESTRING(0 0, 10 0)', 0, true]
-
-      tester['POINT (5 0)', 'LINESTRING(0 0, 10 0)', 5, false]
-      tester['POINT (5 0)', 'LINESTRING(0 0, 10 0)', 0.5, true]
-
-      tester['POINT (10 0)', 'LINESTRING(0 0, 10 0)', 20, false]
-      tester['POINT (10 0)', 'LINESTRING(0 0, 10 0)', 2, true]
+      simple_tester(:interpolate, 'POINT (10 0)', 'LINESTRING(0 0, 10 0)', 20, false)
+      simple_tester(:interpolate, 'POINT (10 0)', 'LINESTRING(0 0, 10 0)', 2, true)
 
       assert_raises(RuntimeError) do
         read('POINT(1 2)').interpolate(0)
@@ -1218,53 +1051,33 @@ class GeometryTests < MiniTest::Unit::TestCase
 
   if ENV['FORCE_TESTS'] || Geos::Geometry.method_defined?(:start_point)
     def test_start_and_end_points
-      writer.rounding_precision = 0
-
-      tester = lambda { |expected, method, geom|
-        assert_equal(expected, write(geom.send(method)))
-      }
-
       geom = read('LINESTRING (10 10, 10 14, 14 14, 14 10)')
-      tester['POINT (10 10)', :start_point, geom]
-      tester['POINT (14 10)', :end_point, geom]
+      simple_tester(:start_point, 'POINT (10 10)', geom)
+      simple_tester(:end_point, 'POINT (14 10)', geom)
 
       geom = read('LINEARRING (11 11, 11 12, 12 11, 11 11)')
-      tester['POINT (11 11)', :start_point, geom]
-      tester['POINT (11 11)', :end_point, geom]
+      simple_tester(:start_point, 'POINT (11 11)', geom)
+      simple_tester(:start_point, 'POINT (11 11)', geom)
     end
   end
 
   def test_area
-    tester = lambda { |expected, g|
-      assert_in_delta(expected, read(g).area, TOLERANCE)
-    }
-
-    tester[1.0, 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))']
-    tester[0.0, 'POINT (0 0)']
-    tester[0.0, 'LINESTRING (0 0 , 10 0)']
+    simple_tester(:area, 1.0, 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))')
+    simple_tester(:area, 0.0, 'POINT (0 0)')
+    simple_tester(:area, 0.0, 'LINESTRING (0 0 , 10 0)')
   end
 
   def test_length
-    tester = lambda { |expected, g|
-      assert_in_delta(expected, read(g).length, TOLERANCE)
-    }
-
-    tester[4.0, 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))']
-    tester[0.0, 'POINT (0 0)']
-    tester[10.0, 'LINESTRING (0 0 , 10 0)']
+    simple_tester(:length, 4.0, 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))')
+    simple_tester(:length, 0.0, 'POINT (0 0)')
+    simple_tester(:length, 10.0, 'LINESTRING (0 0 , 10 0)')
   end
 
   def test_distance
-    tester = lambda { |expected, g1, g2|
-      geom_1 = read(g1)
-      geom_2 = read(g2)
-      assert_in_delta(expected, geom_1.distance(geom_2), TOLERANCE)
-    }
-
-    g = 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))'
-    tester[0.0, g, 'POINT(0.5 0.5)']
-    tester[1.0, g, 'POINT (-1 0)']
-    tester[2.0, g, 'LINESTRING (3 0 , 10 0)']
+    geom = 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))'
+    simple_tester(:distance, 0.0, geom, read('POINT(0.5 0.5)'))
+    simple_tester(:distance, 1.0, geom, read('POINT (-1 0)'))
+    simple_tester(:distance, 2.0, geom, read('LINESTRING (3 0 , 10 0)'))
   end
 
   if ENV['FORCE_TESTS'] || Geos::Geometry.method_defined?(:hausdorff_distance)
@@ -1299,24 +1112,14 @@ class GeometryTests < MiniTest::Unit::TestCase
 
   if ENV['FORCE_TESTS'] || Geos::Geometry.method_defined?(:snap)
     def test_snap
-      tester = lambda { |expected, g1, g2, tolerance|
-        geom_a = read(g1)
-        geom_b = read(g2)
-        assert_geom_eql_exact(read(expected), geom_a.snap(geom_b, tolerance))
-      }
-
-      writer.trim = true
-
-      geom = 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))'
-      tester['POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))', geom, 'POINT(0.1 0)', 0]
-      tester['POLYGON ((0.1 0, 1 0, 1 1, 0 1, 0.1 0))', geom, 'POINT(0.1 0)', 0.5]
+      geom = read('POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))')
+      simple_tester(:snap, 'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))', geom, read('POINT(0.1 0)'), 0)
+      simple_tester(:snap, 'POLYGON ((0.1 0, 1 0, 1 1, 0 1, 0.1 0))', geom, read('POINT(0.1 0)'), 0.5)
     end
   end
 
   if ENV['FORCE_TESTS'] || Geos::Geometry.method_defined?(:polygonize)
     def test_polygonize
-      writer.rounding_precision = 0
-
       geom_a = read(
         'GEOMETRYCOLLECTION(
           LINESTRING(0 0, 10 10),
@@ -1332,19 +1135,17 @@ class GeometryTests < MiniTest::Unit::TestCase
       assert_equal(2, polygonized.length)
       assert_equal(
         'POLYGON ((185 221, 88 275, 180 316, 292 281, 185 221))',
-        write(polygonized[0])
+        write(polygonized[0].snap_to_grid(0.1))
       )
       assert_equal(
         'POLYGON ((189 98, 83 187, 185 221, 325 168, 189 98))',
-        write(polygonized[1])
+        write(polygonized[1].snap_to_grid(0.1))
       )
     end
   end
 
   if ENV['FORCE_TESTS'] || Geos::Geometry.method_defined?(:polygonize_cut_edges)
     def test_polygonize_cut_edges
-      writer.rounding_precision = 0
-
       geom_a = read(
         'GEOMETRYCOLLECTION(
           LINESTRING(0 0, 10 10),
@@ -1363,7 +1164,9 @@ class GeometryTests < MiniTest::Unit::TestCase
 
   if ENV['FORCE_TESTS'] || Geos::Geometry.method_defined?(:polygonize_full)
     def test_polygonize_full
-      writer.rounding_precision = 0
+      tester = lambda { |expected, geom|
+        assert_equal(expected, write(geom.snap_to_grid(1)))
+      }
 
       geom_a = read(
         'GEOMETRYCOLLECTION(
@@ -1387,25 +1190,25 @@ class GeometryTests < MiniTest::Unit::TestCase
       assert_equal(2, polygonized[:dangles].length)
       assert_equal(0, polygonized[:invalid_rings].length)
 
-      assert_equal(
+      tester[
         'POLYGON ((185 221, 88 275, 180 316, 292 281, 185 221))',
-        write(polygonized[:rings][0])
-      )
+        polygonized[:rings][0]
+      ]
 
-      assert_equal(
+      tester[
         'POLYGON ((189 98, 83 187, 185 221, 325 168, 189 98))',
-        write(polygonized[:rings][1])
-      )
+        polygonized[:rings][1]
+      ]
 
-      assert_equal(
+      tester[
         'LINESTRING (185 221, 100 100)',
-        write(polygonized[:dangles][0])
-      )
+        polygonized[:dangles][0]
+      ]
 
-      assert_equal(
+      tester[
         'LINESTRING (0 0, 10 10)',
-        write(polygonized[:dangles][1])
-      )
+        polygonized[:dangles][1]
+      ]
 
       geom_b = geom_a.union(read('POINT(0 0)'))
       polygonized = geom_b.polygonize_full
@@ -1413,15 +1216,15 @@ class GeometryTests < MiniTest::Unit::TestCase
       assert_equal(2, polygonized[:dangles].length)
       assert_equal(0, polygonized[:invalid_rings].length)
 
-      assert_equal(
+      tester[
         'LINESTRING (132 146, 100 100)',
-        write(polygonized[:dangles][0])
-      )
+        polygonized[:dangles][0]
+      ]
 
-      assert_equal(
+      tester[
         'LINESTRING (0 0, 10 10)',
-        write(polygonized[:dangles][1])
-      )
+        polygonized[:dangles][1]
+      ]
     end
 
     def test_polygonize_with_bad_arguments
@@ -1435,8 +1238,6 @@ class GeometryTests < MiniTest::Unit::TestCase
 
   if ENV['FORCE_TESTS'] || Geos::Geometry.method_defined?(:shared_paths)
     def test_shared_paths
-      writer.rounding_precision = 0
-
       geom_a = read('LINESTRING(0 0, 50 0)')
       geom_b = read('MULTILINESTRING((5 0, 15 0),(40 0, 30 0))')
 
@@ -1494,8 +1295,6 @@ class GeometryTests < MiniTest::Unit::TestCase
   end
 
   def test_normalize
-    writer.trim = true
-
     geom = read('POLYGON((0 0, 5 0, 5 5, 0 5, 0 0))')
     geom.normalize
     assert_equal('POLYGON ((0 0, 0 5, 5 5, 5 0, 0 0))', write(geom))
@@ -1505,8 +1304,6 @@ class GeometryTests < MiniTest::Unit::TestCase
   end
 
   def test_normalize_bang
-    writer.trim = true
-
     geom = read('POLYGON((0 0, 5 0, 5 5, 0 5, 0 0))')
     geom.normalize!
     assert_equal('POLYGON ((0 0, 0 5, 5 5, 5 0, 0 0))', write(geom))

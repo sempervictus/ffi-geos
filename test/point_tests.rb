@@ -6,6 +6,11 @@ require 'test_helper'
 class PointTests < MiniTest::Unit::TestCase
   include TestHelper
 
+  def setup
+    super
+    writer.trim = true
+  end
+
   def test_default_srid
     geom = read('POINT(0 0)')
     assert_equal(0, geom.srid)
@@ -131,12 +136,7 @@ class PointTests < MiniTest::Unit::TestCase
     wkt = 'POINT (10.12 10.12)'
     expected = 'POINT (10 10)'
 
-    writer.trim = true
-
-    geom = read(wkt)
-    geom.snap_to_grid!(1)
-
-    assert_equal(expected, write(geom))
+    simple_bang_tester(:snap_to_grid, expected, wkt, 1)
   end
 
   def test_snap_to_grid_empty
@@ -147,16 +147,12 @@ class PointTests < MiniTest::Unit::TestCase
     wkt = 'POINT (10.12 10.12)'
     expected = 'POINT (10 10)'
 
-    writer.trim = true
-
     srid_copy_tester(:snap_to_grid, expected, 0, :zero, wkt, 1)
     srid_copy_tester(:snap_to_grid, expected, 4326, :lenient, wkt, 1)
     srid_copy_tester(:snap_to_grid, expected, 4326, :strict, wkt, 1)
   end
 
   def test_rotate
-    writer.rounding_precision = 3
-
     wkt = 'POINT (1 1)'
 
     affine_tester(:rotate, 'POINT (29 11)', wkt, Math::PI / 2, [ 10.0, 20.0 ])
@@ -166,7 +162,6 @@ class PointTests < MiniTest::Unit::TestCase
   end
 
   def test_rotate_x
-    writer.rounding_precision = 0
     writer.output_dimensions = 3
 
     wkt = 'POINT Z (1 1 1)'
@@ -178,7 +173,6 @@ class PointTests < MiniTest::Unit::TestCase
   end
 
   def test_rotate_y
-    writer.rounding_precision = 0
     writer.output_dimensions = 3
 
     wkt = 'POINT Z (1 1 1)'
@@ -190,8 +184,6 @@ class PointTests < MiniTest::Unit::TestCase
   end
 
   def test_rotate_z
-    writer.rounding_precision = 0
-
     wkt = 'POINT (1 1)'
 
     affine_tester(:rotate_z, 'POINT (-1 -1)', wkt, Math::PI)

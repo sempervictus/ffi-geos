@@ -6,6 +6,11 @@ require 'test_helper'
 class PolygonTests < MiniTest::Unit::TestCase
   include TestHelper
 
+  def setup
+    super
+    writer.trim = true
+  end
+
   def test_default_srid
     geom = read('POLYGON ((0 0, 5 0, 5 5, 0 5, 0 0))')
     assert_equal(0, geom.srid)
@@ -70,12 +75,7 @@ class PolygonTests < MiniTest::Unit::TestCase
     wkt = 'POLYGON ((-10.12 0, -10.12 5, -10.12 5, -10.12 6, -10.12 6, -10.12 6, -10.12 7, -10.12 7, -10.12 7, -10.12 8, -10.12 8, -9 8, -9 9, -10.12 0))'
     expected = 'POLYGON ((-10 0, -10 5, -10 6, -10 7, -10 8, -9 8, -9 9, -10 0))'
 
-    writer.trim = true
-
-    geom = read(wkt)
-    geom.snap_to_grid!(1)
-
-    assert_equal(expected, write(geom))
+    simple_bang_tester(:snap_to_grid, expected, wkt, 1)
   end
 
   def test_snap_to_grid_with_illegal_result
@@ -90,16 +90,12 @@ class PolygonTests < MiniTest::Unit::TestCase
   end
 
   def test_snap_to_grid_collapse_holes
-    writer.trim = true
-
     wkt = 'POLYGON ((0 0, 0 5, 5 5, 5 0, 0 0), (2.6 2.6, 2.7 2.6, 2.7 2.7, 2.6 2.7, 2.6 2.6))'
 
     assert_equal('POLYGON ((0 0, 0 5, 5 5, 5 0, 0 0))', write(read(wkt).snap_to_grid(1)))
   end
 
   def test_snap_to_grid_with_srid
-    writer.trim = true
-
     wkt = 'POLYGON ((0.1 0.1, 0.1 5.1, 5.1 5.1, 5.1 0.1, 0.1 0.1))'
     expected = 'POLYGON ((0 0, 0 5, 5 5, 5 0, 0 0))'
 
