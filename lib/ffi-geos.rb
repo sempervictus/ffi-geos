@@ -1150,6 +1150,9 @@ module Geos
     end
   end
 
+  class InvalidGeometry < RuntimeError
+  end
+
   include GeomTypes
   include VersionConstants
 end
