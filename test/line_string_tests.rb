@@ -330,4 +330,41 @@ class LineStringTests < MiniTest::Unit::TestCase
     writer.output_dimensions = 3
     affine_tester(:translate, 'LINESTRING Z (-3 -7 3, 7 3 13)', 'LINESTRING Z (0 0 0, 10 10 10)', :x => -3, :y => -7, :z => 3)
   end
+
+  def test_line_interpolate_point
+    tester = lambda { |expected, wkt, fraction|
+      assert_equal(expected, write(read(wkt).line_interpolate_point(fraction)))
+      assert_equal(expected, write(read(wkt).interpolate_point(fraction)))
+    }
+
+    writer.trim = true
+
+    tester['POINT (0 0)', 'LINESTRING (0 0, 1 1)', 0]
+    tester['POINT (1 1)', 'LINESTRING (0 0, 1 1)', 1]
+    tester['POINT (0 25)', 'LINESTRING (0 0, 0 25, 0 50, 0 75, 0 100)', 0.25]
+
+    writer.output_dimensions = 3
+    tester['POINT Z (0.5 0.5 7.5)', 'LINESTRING(0 0 10, 1 1 5)', 0.5]
+  end
+
+  def test_line_interpolate_point_with_srid
+    writer.trim = true
+
+    srid_copy_tester(:line_interpolate_point, 'POINT (0 0)', 0, :zero, 'LINESTRING (0 0, 1 1)', 0)
+    srid_copy_tester(:line_interpolate_point, 'POINT (0 0)', 4326, :lenient, 'LINESTRING (0 0, 1 1)', 0)
+    srid_copy_tester(:line_interpolate_point, 'POINT (0 0)', 4326, :strict, 'LINESTRING (0 0, 1 1)', 0)
+
+    srid_copy_tester(:line_interpolate_point, 'POINT (1 1)', 0, :zero, 'LINESTRING (0 0, 1 1)', 1)
+    srid_copy_tester(:line_interpolate_point, 'POINT (1 1)', 4326, :lenient, 'LINESTRING (0 0, 1 1)', 1)
+    srid_copy_tester(:line_interpolate_point, 'POINT (1 1)', 4326, :strict, 'LINESTRING (0 0, 1 1)', 1)
+
+    srid_copy_tester(:line_interpolate_point, 'POINT (0 25)', 0, :zero, 'LINESTRING (0 0, 0 25, 0 50, 0 75, 0 100)', 0.25)
+    srid_copy_tester(:line_interpolate_point, 'POINT (0 25)', 4326, :lenient, 'LINESTRING (0 0, 0 25, 0 50, 0 75, 0 100)', 0.25)
+    srid_copy_tester(:line_interpolate_point, 'POINT (0 25)', 4326, :strict, 'LINESTRING (0 0, 0 25, 0 50, 0 75, 0 100)', 0.25)
+
+    writer.output_dimensions = 3
+    srid_copy_tester(:line_interpolate_point, 'POINT Z (0.5 0.5 7.5)', 0, :zero, 'LINESTRING(0 0 10, 1 1 5)', 0.5)
+    srid_copy_tester(:line_interpolate_point, 'POINT Z (0.5 0.5 7.5)', 4326, :lenient, 'LINESTRING(0 0 10, 1 1 5)', 0.5)
+    srid_copy_tester(:line_interpolate_point, 'POINT Z (0.5 0.5 7.5)', 4326, :strict, 'LINESTRING(0 0 10, 1 1 5)', 0.5)
+  end
 end
