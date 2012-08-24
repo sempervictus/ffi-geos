@@ -138,6 +138,21 @@ module Geos
     end
     alias :interpolate_point :line_interpolate_point
 
+    def to_linear_ring
+      if self.closed?
+        Geos.create_linear_ring(self.coord_seq, :srid => pick_srid_according_to_policy(self.srid))
+      else
+        self_cs = self.coord_seq.to_a
+        self_cs.push(self_cs[0])
+
+        Geos.create_linear_ring(self_cs, :srid => pick_srid_according_to_policy(self.srid))
+      end
+    end
+
+    def to_polygon
+      self.to_linear_ring.to_polygon
+    end
+
     %w{ max min }.each do |op|
       %w{ x y }.each do |dimension|
         self.class_eval(<<-EOF, __FILE__, __LINE__ + 1)

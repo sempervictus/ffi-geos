@@ -26,4 +26,19 @@ class LinearRingTests < MiniTest::Unit::TestCase
     srid_copy_tester(:to_polygon, expected, 4326, :lenient, wkt)
     srid_copy_tester(:to_polygon,  expected, 4326, :strict, wkt)
   end
+
+  def test_to_line_string
+    geom = read('LINEARRING (0 0, 5 0, 5 5, 0 5, 0 0)')
+
+    assert_equal('LINESTRING (0 0, 5 0, 5 5, 0 5, 0 0)', write(geom.to_line_string))
+  end
+
+  def test_to_line_string_with_srid
+    wkt = 'LINEARRING (0 0, 5 0, 5 5, 0 5, 0 0)'
+    expected = 'LINESTRING (0 0, 5 0, 5 5, 0 5, 0 0)'
+
+    srid_copy_tester(:to_line_string, expected, 0, :zero, wkt)
+    srid_copy_tester(:to_line_string, expected, 4326, :lenient, wkt)
+    srid_copy_tester(:to_line_string,  expected, 4326, :strict, wkt)
+  end
 end
